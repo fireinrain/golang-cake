@@ -33,7 +33,7 @@ func main() {
 	}
 
 	var cftestPath = "/Users/sunrise/BackSoftWares/CloudflareST_darwin_amd64/CloudflareST"
-	var gitRepo = "https://github.com/ip-scanner/cloudflare/archive/refs/heads/daily.zip"
+	var gitRepo = "https://archive.fastgit.org/ip-scanner/cloudflare/archive/refs/heads/daily.zip"
 	var ipZipFile = "ip.zip"
 	ctx := context.Background()
 	err := requests.
