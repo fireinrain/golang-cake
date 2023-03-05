@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "method": "aria2.tellStatus",
+  "id": "1",
+  "params": [
+    "token:c9241dde3e84994c5bf6",
+    [
+      "gid:d363de5830eeeab3",
+      "totalLength",
+      "completedLength",
+      "uploadSpeed",
+      "status",
+      "verifiedLength"
+    ]]
+}

@@ -1,0 +1,39 @@
+POST
+Content-Type: application/json
+Accept: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "aria2.tellStatus",
+  "id": "1",
+  "params": [
+    "token:c9241dde3e84994c5bf6",
+    [
+      "gid:9e75400553d711bb",
+      "totalLength",
+      "completedLength",
+      "uploadSpeed",
+      "status",
+      "verifiedLength"
+    ]
+  ]
+}
+###
+POST http://216.127.164.234:6800/jsonrpc
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "aria2.tellActive",
+  "id": "1",
+  "params": ["token:c9241dde3e84994c5bf6",
+    [
+      "gid:9e75400553d711bb",
+      "totalLength",
+      "completedLength",
+      "uploadSpeed",
+      "status",
+      "verifiedLength"
+    ]]
+}
+
