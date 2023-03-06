@@ -342,13 +342,7 @@ func main() {
 					//下载完成
 					fmt.Println("任务下载完成,正在上传onedrive...")
 
-					//上传onedrive
-					fmt.Println("上传onedrive完成...")
-
-					//删除源文件
-					fmt.Println("删除源文件成功...")
-
-					fmt.Println(result)
+					fmt.Println(result.Result.Dir)
 
 					break checkLoop
 				}
@@ -356,6 +350,13 @@ func main() {
 			}
 
 		}
+
+		//上传onedrive
+		fmt.Println("上传onedrive完成...")
+
+		//删除源文件
+		fmt.Println("删除源文件成功...")
+
 		break
 	}
 
