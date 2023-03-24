@@ -20,6 +20,7 @@
 
 */*.txt
 */vmess.txt
+*/result.txt
 # Go workspace file
 go.work
 
