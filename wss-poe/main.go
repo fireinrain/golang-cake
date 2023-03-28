@@ -24,9 +24,11 @@ func main() {
 	//
 
 	conn, _, err := dialer.Dial("wss://tch505872.tch.quora.com/up/chan50-8888/updates?min_seq=3442885839&channel=poe-chan50-8888-kgkbixjbmqrvykhqexay&hash=897287112690331892", nil)
+	defer conn.Close()
 	if err != nil {
 		log.Fatal("WebSocket dial error:", err)
 	}
+	_ = conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 
 	// Continuously read incoming messages
 	var messageResp MessageResp

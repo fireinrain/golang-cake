@@ -33,7 +33,7 @@ func main() {
 	}
 
 	var cftestPath = "/Users/sunrise/BackSoftWares/CloudflareST_darwin_amd64/CloudflareST"
-	var gitRepo = "https://archive.fastgit.org/ip-scanner/cloudflare/archive/refs/heads/daily.zip"
+	var gitRepo = "https://ghproxy.com/https://github.com/ip-scanner/cloudflare/archive/refs/heads/daily.zip"
 	var ipZipFile = "ip.zip"
 	ctx := context.Background()
 	err := requests.
@@ -96,6 +96,9 @@ func main() {
 	//最后写入到ip.txt文件中
 
 	var resultIPText = "ip.txt"
+	if FileOrDirExists(resultIPText) {
+		_ = os.Remove(resultIPText)
+	}
 	var lineCounter = 0
 	resultFile, err := os.OpenFile(resultIPText, os.O_CREATE|os.O_RDWR|os.O_APPEND, os.ModeAppend|os.ModePerm)
 	defer resultFile.Close()
