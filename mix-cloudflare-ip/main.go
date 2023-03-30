@@ -17,6 +17,11 @@ import (
 	"time"
 )
 
+var cftestPath = "/Users/sunrise/BackSoftWares/CloudflareST_darwin_amd64/CloudflareST"
+var gitRepo = "https://ghproxy.com/https://github.com/ip-scanner/cloudflare/archive/refs/heads/daily.zip"
+var speedTestUrl = "https://speed.cloudflare.com/__down?bytes=200000000"
+var ipZipFile = "ip.zip"
+
 func main() {
 	//result.cvs
 	var ipPremium = "result.csv"
@@ -32,9 +37,6 @@ func main() {
 		}
 	}
 
-	var cftestPath = "/Users/sunrise/BackSoftWares/CloudflareST_darwin_amd64/CloudflareST"
-	var gitRepo = "https://ghproxy.com/https://github.com/ip-scanner/cloudflare/archive/refs/heads/daily.zip"
-	var ipZipFile = "ip.zip"
 	ctx := context.Background()
 	err := requests.
 		URL(gitRepo).
@@ -167,7 +169,7 @@ func main() {
 
 // RunCloudflareST run cloudflareSt soft to check ip that given by
 func RunCloudflareST(cloudFStPath string, ipTextPath string) {
-	cmd := exec.Command(cloudFStPath, "-f", ipTextPath)
+	cmd := exec.Command(cloudFStPath, "-url", speedTestUrl, "-f", ipTextPath)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		fmt.Println(err)
