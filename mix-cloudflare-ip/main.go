@@ -19,7 +19,7 @@ import (
 
 var cftestPath = "/Users/sunrise/BackSoftWares/CloudflareST_darwin_amd64/CloudflareST"
 var gitRepo = "https://ghproxy.com/https://github.com/ip-scanner/cloudflare/archive/refs/heads/daily.zip"
-var speedTestUrl = "https://speed.cloudflare.com/__down?bytes=200000000"
+var speedTestUrl = "https://cloudflarest.gssmc.tk/100mb.zip"
 var ipZipFile = "ip.zip"
 
 func main() {
