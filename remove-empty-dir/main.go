@@ -3,9 +3,51 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 func main() {
+	//RemoveEmptyDir()
+	PrintEmptyDir()
+}
+
+func PrintEmptyDir() {
+	var diskPath = "/Volumes/移动数据盘2/v2ph-images"
+	fmt.Println("当前移动盘挂载路径: " + diskPath)
+	separator := string(os.PathSeparator)
+
+	dir, err := os.ReadDir(diskPath)
+	if err != nil {
+		fmt.Println("读取文件夹失败: " + err.Error())
+		return
+	}
+	emptyDirCounter := 0
+	for _, entry := range dir {
+		if entry.IsDir() {
+			//fmt.Println("找到目录: " + entry.Name())
+			//判断是否是空目录
+			currentDir := diskPath + separator + entry.Name()
+			readDir, _ := os.ReadDir(currentDir)
+			if len(readDir) <= 0 {
+				fmt.Println("找到空目录: " + currentDir)
+				emptyDirCounter += 1
+				fromSlash := filepath.FromSlash(currentDir)
+				fmt.Println(fromSlash)
+				err := os.RemoveAll(fromSlash)
+				if err != nil {
+					fmt.Println("删除目录: " + currentDir + "失败")
+					continue
+				}
+			}
+		} else {
+			fmt.Println("找到文件: " + entry.Name())
+		}
+	}
+	fmt.Printf("一共找到：%d\n", emptyDirCounter)
+
+}
+
+func RemoveEmptyDir() {
 	var diskPath = "/Volumes/移动数据盘2/文件"
 	fmt.Println("当前移动盘挂载路径: " + diskPath)
 	separator := string(os.PathSeparator)
