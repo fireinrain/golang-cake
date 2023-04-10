@@ -8,7 +8,7 @@ import (
 
 func main() {
 	// Replace these with the hostname and port of the server you want to check
-	hostname := "google.com"
+	hostname := "www.metrodeal.com"
 	port := "443"
 
 	tlsConfig := &tls.Config{
