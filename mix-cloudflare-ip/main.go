@@ -169,7 +169,7 @@ func main() {
 
 // RunCloudflareST run cloudflareSt soft to check ip that given by
 func RunCloudflareST(cloudFStPath string, ipTextPath string) {
-	cmd := exec.Command(cloudFStPath, "-url", speedTestUrl, "-f", ipTextPath)
+	cmd := exec.Command(cloudFStPath, "-dn", "20", "-p", "20", "-url", speedTestUrl, "-f", ipTextPath)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		fmt.Println(err)
