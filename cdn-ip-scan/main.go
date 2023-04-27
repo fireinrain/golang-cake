@@ -2,15 +2,21 @@ package main
 
 import (
 	"crypto/tls"
-	"errors"
 	"fmt"
 	_ "net"
 	"strings"
+	"sync"
 	"time"
 )
 
 // 全球ip信息
 // http://ipblock.chacuo.net/
+
+type CheckResult struct {
+	Ip        string
+	IsProxyIp bool
+	Error     error
+}
 
 func main() {
 	sampleIps := []string{
@@ -31,26 +37,45 @@ func main() {
 		"45.64.22.23",
 		"45.64.22.6",
 	}
-	for _, ip := range sampleIps {
-		checker, err := SNIChecker(ip, "www.cloudflare.com")
-		if err != nil {
-			fmt.Println("checker error:", err)
-		}
-		if checker {
-			fmt.Printf("ip: %s is a proxy for cloudflare\n", ip)
-		}
+	resultsChan := make(chan CheckResult)
+	waitGroup := sync.WaitGroup{}
 
+	for _, ip := range sampleIps {
+		go func(ip string) {
+			waitGroup.Add(1)
+			SNIChecker(ip, "www.cloudflare.com", resultsChan)
+			waitGroup.Done()
+		}(ip)
+	}
+	go func() {
+		waitGroup.Wait()
+		close(resultsChan)
+	}()
+	//channel没关闭 容易阻塞
+	for result := range resultsChan {
+		if result.Error != nil {
+			fmt.Println("checker error:", result.Error)
+		}
+		if result.IsProxyIp {
+			fmt.Printf("ip: %s is a proxy for cloudflare\n", result.Ip)
+		}
 	}
 }
-func SNIChecker(ipStr string, serverName string) (bool, error) {
+func SNIChecker(ipStr string, serverName string, resultChan chan CheckResult) {
 	// Replace <IP> with the target IP address.
 	addr := fmt.Sprintf("%s:443", ipStr)
 	conn, err := tls.Dial("tcp", addr, &tls.Config{
 		ServerName: serverName,
 	})
 	if err != nil {
-		fmt.Println("Error connecting to server:", err)
-		return false, errors.New("error connecting to server")
+		fmt.Printf("Error connecting to server: %s to %s\n", err, ipStr)
+		resultChan <- CheckResult{
+			Ip:        ipStr,
+			IsProxyIp: false,
+			Error:     err,
+		}
+		return
+		//return false, errors.New("error connecting to server")
 	}
 	defer conn.Close()
 
@@ -65,14 +90,28 @@ func SNIChecker(ipStr string, serverName string) (bool, error) {
 	//	fmt.Println()
 	//}
 
+	isPassed := false
 	for _, cert := range certs {
 		if strings.Contains(cert.Subject.CommonName, serverName) && cert.NotAfter.After(time.Now()) {
-			return true, nil
+			//return true, nil
+			isPassed = true
+			break
 		}
 
 	}
-	return false, nil
-
+	if isPassed {
+		resultChan <- CheckResult{
+			Ip:        ipStr,
+			IsProxyIp: true,
+			Error:     nil,
+		}
+	} else {
+		resultChan <- CheckResult{
+			Ip:        ipStr,
+			IsProxyIp: false,
+			Error:     nil,
+		}
+	}
 }
 
 //IPv4地址空间中有一部分地址是被保留或未分配的，这些地址不能被用于互联网的通信。以下是IPv4地址空间中保留或未分配的地址：
