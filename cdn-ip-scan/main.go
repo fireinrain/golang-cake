@@ -36,6 +36,15 @@ func main() {
 		"45.64.22.22",
 		"45.64.22.23",
 		"45.64.22.6",
+		"146.56.166.153",
+		"128.14.142.176",
+		"132.145.94.15",
+		"128.14.140.254",
+		"119.36.161.40",
+		"159.65.161.124",
+		"135.148.4.33",
+		"128.14.142.176",
+		"173.44.61.144",
 	}
 	resultsChan := make(chan CheckResult)
 	waitGroup := sync.WaitGroup{}
@@ -51,6 +60,7 @@ func main() {
 		waitGroup.Wait()
 		close(resultsChan)
 	}()
+	proxyedIps := []string{}
 	//channel没关闭 容易阻塞
 	for result := range resultsChan {
 		if result.Error != nil {
@@ -58,8 +68,11 @@ func main() {
 		}
 		if result.IsProxyIp {
 			fmt.Printf("ip: %s is a proxy for cloudflare\n", result.Ip)
+			proxyedIps = append(proxyedIps, result.Ip)
 		}
 	}
+	fmt.Println("------------------")
+	fmt.Println(strings.Join(proxyedIps, "\n"))
 }
 func SNIChecker(ipStr string, serverName string, resultChan chan CheckResult) {
 	// Replace <IP> with the target IP address.

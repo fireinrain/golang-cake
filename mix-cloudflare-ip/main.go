@@ -159,34 +159,18 @@ func main() {
 		return
 	}
 	//RunCloudflareST(cftestPath, absPath)
-	cmd := cftestPath + " -f " + absPath
+	cmdParams := []string{
+		cftestPath,
+		"-dn 20",
+		"-p 20",
+		"-url " + speedTestUrl,
+		"-f " + absPath,
+	}
+	cmd := strings.Join(cmdParams, " ")
 	fmt.Println("运行: " + cmd)
 	RunWithCancelCommand(cmd)
 	//cmd2 := "ping baidu.com"
 	//RunWithCancelCommand(cmd2)
-
-}
-
-// RunCloudflareST run cloudflareSt soft to check ip that given by
-func RunCloudflareST(cloudFStPath string, ipTextPath string) {
-	cmd := exec.Command(cloudFStPath, "-dn", "20", "-p", "20", "-url", speedTestUrl, "-f", ipTextPath)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	go func() {
-		reader := bufio.NewReader(stdout)
-		for {
-			readString, err := reader.ReadString('\n')
-			if err != nil || err == io.EOF {
-				break
-			}
-			fmt.Print(readString)
-		}
-	}()
-	_ = cmd.Run()
 }
 
 func RunWithCancelCommand(cmd string) {
