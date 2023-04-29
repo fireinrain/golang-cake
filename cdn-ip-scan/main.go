@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
+	"net"
 	_ "net"
 	"strings"
 	"sync"
@@ -20,6 +21,9 @@ type CheckResult struct {
 
 func main() {
 	sampleIps := []string{
+		"119.36.161.40",
+		"211.72.35.110",
+		"128.14.142.176",
 		"18.163.249.175",
 		"128.14.140.254",
 		"152.69.204.164",
@@ -46,6 +50,9 @@ func main() {
 		"128.14.142.176",
 		"173.44.61.144",
 	}
+	//ip 去重
+	sampleIps = RemoveDuplicates(sampleIps)
+
 	resultsChan := make(chan CheckResult)
 	waitGroup := sync.WaitGroup{}
 
@@ -71,13 +78,16 @@ func main() {
 			proxyedIps = append(proxyedIps, result.Ip)
 		}
 	}
-	fmt.Println("------------------")
+	fmt.Println("------------------result ip------------------")
 	fmt.Println(strings.Join(proxyedIps, "\n"))
 }
 func SNIChecker(ipStr string, serverName string, resultChan chan CheckResult) {
+	dialer := &net.Dialer{
+		Timeout: 5 * time.Second,
+	}
 	// Replace <IP> with the target IP address.
 	addr := fmt.Sprintf("%s:443", ipStr)
-	conn, err := tls.Dial("tcp", addr, &tls.Config{
+	conn, err := tls.DialWithDialer(dialer, "tcp", addr, &tls.Config{
 		ServerName: serverName,
 	})
 	if err != nil {
@@ -125,6 +135,18 @@ func SNIChecker(ipStr string, serverName string, resultChan chan CheckResult) {
 			Error:     nil,
 		}
 	}
+}
+
+func RemoveDuplicates(strSlice []string) []string {
+	keys := make(map[string]bool)
+	list := []string{}
+	for _, entry := range strSlice {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
 }
 
 //IPv4地址空间中有一部分地址是被保留或未分配的，这些地址不能被用于互联网的通信。以下是IPv4地址空间中保留或未分配的地址：
