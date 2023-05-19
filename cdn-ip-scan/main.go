@@ -1,14 +1,109 @@
 package main
 
 import (
+	"bufio"
 	"crypto/tls"
 	"fmt"
+	"github.com/panjf2000/ants/v2"
 	"net"
 	_ "net"
+	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
+
+type IpRange struct {
+	IPStart string `json:"IPStart,omitempty"`
+	IPEnd   string `json:"IPEnd,omitempty"`
+	IPCount int    `json:"IPCount,omitempty"`
+}
+
+func ExtractIpRange() ([]IpRange, error) {
+	filePath := "tw-hinet.txt"
+
+	// Open the file
+	file, err := os.Open(filePath)
+	if err != nil {
+		fmt.Println("error opening file:", err)
+		return nil, err
+	}
+	defer file.Close()
+
+	// Create a scanner to read the file line by line
+	scanner := bufio.NewScanner(file)
+
+	var result []IpRange
+	// Iterate over each line in the file
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// Split the line into three fields: startIP, endIP, and IPCount
+		fields := strings.Split(line, "\t")
+		if len(fields) != 3 {
+			fmt.Println("invalid line format:", line)
+			continue
+		}
+
+		startIP := fields[0]
+		endIP := fields[1]
+		IPCount := fields[2]
+		atoi, err := strconv.Atoi(IPCount)
+		if err != nil {
+			panic(err)
+		}
+
+		// Process the extracted data as needed
+		//fmt.Println("Start IP:", startIP)
+		//fmt.Println("End IP:", endIP)
+		//fmt.Println("IP Count:", IPCount)
+		ipRange := IpRange{
+			IPStart: startIP,
+			IPEnd:   endIP,
+			IPCount: atoi,
+		}
+		result = append(result, ipRange)
+	}
+
+	if scanner.Err() != nil {
+		fmt.Println("error reading file:", scanner.Err())
+		return nil, scanner.Err()
+	}
+	return result, nil
+}
+
+func GetIpListFromIPRange(startIP, endIP string) ([]string, error) {
+	var ipList []string
+
+	// Parse the starting and ending IP addresses
+	start := net.ParseIP(startIP)
+	end := net.ParseIP(endIP)
+
+	// Check if the IP addresses are valid
+	if start == nil || end == nil {
+		return nil, fmt.Errorf("invalid ip address")
+	}
+
+	// Iterate over the IP addresses in the range
+	for ip := start; !ip.Equal(end); incIPByOne(ip) {
+		ipList = append(ipList, ip.String())
+	}
+	//add ipend
+	//ipList = append(ipList,endIP)
+
+	return ipList, nil
+}
+
+func incIPByOne(ip net.IP) {
+	// Increment the IP address by 1
+	for j := len(ip) - 1; j >= 0; j-- {
+		ip[j]++
+		if ip[j] > 0 {
+			break
+		}
+	}
+}
 
 // 全球ip信息
 // http://ipblock.chacuo.net/
@@ -20,53 +115,60 @@ type CheckResult struct {
 }
 
 func main() {
-	sampleIps := []string{
-		"119.36.161.40",
-		"211.72.35.110",
-		"128.14.142.176",
-		"18.163.249.175",
-		"128.14.140.254",
-		"152.69.204.164",
-		"107.172.242.3",
-		"23.237.33.106",
-		"173.205.94.4",
-		"104.223.102.254",
-		"128.14.142.176",
-		"211.72.35.110",
-		"119.36.161.40",
-		"45.64.22.53",
-		"45.64.22.56",
-		"45.64.22.21",
-		"45.64.22.22",
-		"45.64.22.23",
-		"45.64.22.6",
-		"146.56.166.153",
-		"128.14.142.176",
-		"132.145.94.15",
-		"128.14.140.254",
-		"119.36.161.40",
-		"159.65.161.124",
-		"135.148.4.33",
-		"128.14.142.176",
-		"173.44.61.144",
-	}
-	//ip 去重
-	sampleIps = RemoveDuplicates(sampleIps)
+	p, _ := ants.NewPool(10000)
+	defer p.Release()
+	//batchTaskChannel := make(chan []string, 10000)
 
-	resultsChan := make(chan CheckResult)
-	waitGroup := sync.WaitGroup{}
+	ipRanges, err := ExtractIpRange()
+	if err != nil {
+		fmt.Println("Error extracting: ", err)
+	}
+	for _, value := range ipRanges {
+		fmt.Println("process ip range: ", value)
+		ipList, err := GetIpListFromIPRange(value.IPStart, value.IPEnd)
+		if err != nil {
+			fmt.Println("get ip list: ", err)
+			break
+		}
+		batches := divideIntoBatches(ipList, 10000)
+		for index, v := range batches {
+			fmt.Println("正在处理第: ", index, "批次")
+			CheckIfMatchedCf(v, p)
+		}
+	}
+
+}
+
+func divideIntoBatches(data []string, batchSize int) [][]string {
+	// 将数据划分成批次
+	var batches [][]string
+	for i := 0; i < len(data); i += batchSize {
+		end := i + batchSize
+		if end > len(data) {
+			end = len(data)
+		}
+		batches = append(batches, data[i:end])
+	}
+	return batches
+}
+func CheckIfMatchedCf(sampleIps []string, pool *ants.Pool) {
+	resultsChan := make(chan CheckResult, 50)
+	waitGroup := &sync.WaitGroup{}
 
 	for _, ip := range sampleIps {
-		go func(ip string) {
-			waitGroup.Add(1)
+		waitGroup.Add(1)
+		checkTask := func() {
+			defer waitGroup.Done()
 			SNIChecker(ip, "www.cloudflare.com", resultsChan)
-			waitGroup.Done()
-		}(ip)
+		}
+		pool.Submit(checkTask)
+
 	}
 	go func() {
 		waitGroup.Wait()
 		close(resultsChan)
 	}()
+
 	proxyedIps := []string{}
 	//channel没关闭 容易阻塞
 	for result := range resultsChan {
@@ -80,10 +182,30 @@ func main() {
 	}
 	fmt.Println("------------------result ip------------------")
 	fmt.Println(strings.Join(proxyedIps, "\n"))
+	err := AppendResultToFile("result.txt", strings.Join(proxyedIps, "\n"))
+	if err != nil {
+		fmt.Println("write file error:", err)
+	}
+
 }
+
+func AppendResultToFile(filePath, content string) error {
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(content + "\n")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func SNIChecker(ipStr string, serverName string, resultChan chan CheckResult) {
 	dialer := &net.Dialer{
-		Timeout: 5 * time.Second,
+		Timeout: 6 * time.Second,
 	}
 	// Replace <IP> with the target IP address.
 	addr := fmt.Sprintf("%s:443", ipStr)
