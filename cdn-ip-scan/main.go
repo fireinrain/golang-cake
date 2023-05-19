@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"crypto/tls"
 	"fmt"
-	"github.com/panjf2000/ants/v2"
 	"net"
 	_ "net"
 	"os"
@@ -115,8 +114,6 @@ type CheckResult struct {
 }
 
 func main() {
-	p, _ := ants.NewPool(10000)
-	defer p.Release()
 	//batchTaskChannel := make(chan []string, 10000)
 
 	ipRanges, err := ExtractIpRange()
@@ -130,10 +127,10 @@ func main() {
 			fmt.Println("get ip list: ", err)
 			break
 		}
-		batches := divideIntoBatches(ipList, 10000)
+		batches := divideIntoBatches(ipList, 500)
 		for index, v := range batches {
-			fmt.Println("正在处理第: ", index, "批次")
-			CheckIfMatchedCf(v, p)
+			fmt.Println("正在处理第: ", index+1, "批次")
+			CheckIfMatchedCf(v)
 		}
 	}
 
@@ -151,18 +148,16 @@ func divideIntoBatches(data []string, batchSize int) [][]string {
 	}
 	return batches
 }
-func CheckIfMatchedCf(sampleIps []string, pool *ants.Pool) {
+func CheckIfMatchedCf(sampleIps []string) {
 	resultsChan := make(chan CheckResult, 50)
 	waitGroup := &sync.WaitGroup{}
 
 	for _, ip := range sampleIps {
 		waitGroup.Add(1)
-		checkTask := func() {
+		go func(ip string) {
 			defer waitGroup.Done()
 			SNIChecker(ip, "www.cloudflare.com", resultsChan)
-		}
-		pool.Submit(checkTask)
-
+		}(ip)
 	}
 	go func() {
 		waitGroup.Wait()
@@ -181,8 +176,9 @@ func CheckIfMatchedCf(sampleIps []string, pool *ants.Pool) {
 		}
 	}
 	fmt.Println("------------------result ip------------------")
-	fmt.Println(strings.Join(proxyedIps, "\n"))
-	err := AppendResultToFile("result.txt", strings.Join(proxyedIps, "\n"))
+	results := strings.Join(proxyedIps, "\n")
+	fmt.Println(results)
+	err := AppendResultToFile("resultips.txt", results)
 	if err != nil {
 		fmt.Println("write file error:", err)
 	}
@@ -190,22 +186,23 @@ func CheckIfMatchedCf(sampleIps []string, pool *ants.Pool) {
 }
 
 func AppendResultToFile(filePath, content string) error {
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	defer file.Close()
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
 	_, err = file.WriteString(content + "\n")
 	if err != nil {
 		return err
 	}
+	file.Sync()
 	return nil
 }
 
 func SNIChecker(ipStr string, serverName string, resultChan chan CheckResult) {
 	dialer := &net.Dialer{
-		Timeout: 6 * time.Second,
+		Timeout: 3 * time.Second,
 	}
 	// Replace <IP> with the target IP address.
 	addr := fmt.Sprintf("%s:443", ipStr)
@@ -213,7 +210,7 @@ func SNIChecker(ipStr string, serverName string, resultChan chan CheckResult) {
 		ServerName: serverName,
 	})
 	if err != nil {
-		fmt.Printf("Error connecting to server: %s to %s\n", err, ipStr)
+		//fmt.Printf("Error connecting to server: %s to %s\n", err, ipStr)
 		resultChan <- CheckResult{
 			Ip:        ipStr,
 			IsProxyIp: false,
