@@ -3,32 +3,15 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"get-openai-token/utils"
 	"net/http"
 	"os"
 	"regexp"
 )
 
 const OpenaiTokenBaseUrl = "https://auth0.openai.com/oauth/token"
-
-func generateCodeVerifier() string {
-	// 随机生成一个长度为 32 的 code_verifier
-	token := make([]byte, 32)
-	rand.Read(token)
-	codeVerifier := base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(token)
-	return codeVerifier
-}
-
-func generateCodeChallenge(codeVerifier string) string {
-	// 对 code_verifier 进行哈希处理，然后再进行 base64url 编码，生成 code_challenge
-	sha256Hash := sha256.Sum256([]byte(codeVerifier))
-	codeChallenge := base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(sha256Hash[:])
-	return codeChallenge
-}
 
 type OpenaiToken struct {
 	AccessToken  string `json:"access_token"`
@@ -172,8 +155,8 @@ func getLoginUrl(codeChallenge string) string {
 
 // 使用方法
 func ActionForOpenaiToken() {
-	codeVerifier := generateCodeVerifier()
-	codeChallenge := generateCodeChallenge(codeVerifier)
+	codeVerifier := utils.GenerateCodeVerifier()
+	codeChallenge := utils.GenerateCodeChallenge(codeVerifier)
 	fmt.Println("code_verifier:", codeVerifier)
 	fmt.Println("code_challenge:", codeChallenge)
 	var loginUrlForBrowser = getLoginUrl(codeChallenge)
