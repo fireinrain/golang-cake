@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+// curl -svo /dev/null -H 'Host: www.cloudflare.com' http://220.130.80.179
+//openssl s_client -connect 220.130.80.179:443 -servername www.cloudflare.com
+
+// echo 220.130.80.179 | zgrab2 tls --server-name www.cloudflare.com | grep "cloudflare" | jq '.ip'
 type IpRange struct {
 	IPStart string `json:"IPStart,omitempty"`
 	IPEnd   string `json:"IPEnd,omitempty"`
