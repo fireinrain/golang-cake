@@ -206,7 +206,7 @@ func AppendResultToFile(filePath, content string) error {
 
 func SNIChecker(ipStr string, serverName string, resultChan chan CheckResult) {
 	dialer := &net.Dialer{
-		Timeout: 3 * time.Second,
+		Timeout: 15 * time.Second,
 	}
 	// Replace <IP> with the target IP address.
 	addr := fmt.Sprintf("%s:443", ipStr)
