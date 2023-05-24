@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/tls"
 	"fmt"
+	"math"
 	"net"
 	_ "net"
 	"os"
@@ -20,12 +21,73 @@ import (
 
 // zmap 快速判断443端口开放
 // sudo zmap -B 100K -p 443 211.72.0.0/16 -o results.csv
+
+// IpRange
+//
+//	IpRange
+//	@Description: IP range表示
 type IpRange struct {
 	IPStart string `json:"IPStart,omitempty"`
 	IPEnd   string `json:"IPEnd,omitempty"`
 	IPCount int    `json:"IPCount,omitempty"`
 }
 
+// IpRange2CIDR
+//
+//	@Description: 将ip range转化为CIDR表示
+//	@receiver r
+//	@return cidr
+//	@return err
+func (r IpRange) IpRange2CIDR() (cidr string, err error) {
+	startIP := r.IPStart
+	endIP := r.IPEnd
+	// Parse start and end IPs
+	startIPParts := strings.Split(startIP, ".")
+	endIPParts := strings.Split(endIP, ".")
+
+	if len(startIPParts) != 4 || len(endIPParts) != 4 {
+		return "", fmt.Errorf("invalid IP address format")
+	}
+
+	// Convert IP parts to integers
+	var startIPInt, endIPInt uint32
+	for i := 0; i < 4; i++ {
+		startOctet, err := strconv.Atoi(startIPParts[i])
+		if err != nil {
+			return "", fmt.Errorf("invalid IP address format")
+		}
+		endOctet, err := strconv.Atoi(endIPParts[i])
+		if err != nil {
+			return "", fmt.Errorf("invalid IP address format")
+		}
+
+		if startOctet < 0 || startOctet > 255 || endOctet < 0 || endOctet > 255 {
+			return "", fmt.Errorf("invalid IP address range")
+		}
+
+		startIPInt = (startIPInt << 8) + uint32(startOctet)
+		endIPInt = (endIPInt << 8) + uint32(endOctet)
+	}
+
+	// Calculate the CIDR mask length
+	maskLength := 32 - int(math.Log2(float64(endIPInt-startIPInt+1)))
+
+	if maskLength <= 0 || maskLength > 32 {
+		return "", fmt.Errorf("invalid IP address range")
+	}
+
+	// Generate the CIDR string
+	cidrRange := fmt.Sprintf("%s/%d.%d.%d.%d", startIP, maskLength, startIPInt>>24, (startIPInt>>16)&255, (startIPInt>>8)&255)
+
+	return cidrRange, nil
+
+}
+
+// ExtractIpRange
+//
+//	@Description: 从文本抽取ip range
+//	@return []IpRange
+//	@return error
 func ExtractIpRange() ([]IpRange, error) {
 	//filePath := "tw-hinet.txt"
 	filePath := "jp-oracle.txt"
@@ -80,6 +142,13 @@ func ExtractIpRange() ([]IpRange, error) {
 	return result, nil
 }
 
+// GetIpListFromIPRange
+//
+//	@Description: 将iprange 转化为ip列表
+//	@param startIP
+//	@param endIP
+//	@return []string
+//	@return error
 func GetIpListFromIPRange(startIP, endIP string) ([]string, error) {
 	var ipList []string
 
@@ -102,6 +171,10 @@ func GetIpListFromIPRange(startIP, endIP string) ([]string, error) {
 	return ipList, nil
 }
 
+// incIPByOne
+//
+//	@Description: ip递增
+//	@param ip
 func incIPByOne(ip net.IP) {
 	// Increment the IP address by 1
 	for j := len(ip) - 1; j >= 0; j-- {
@@ -115,15 +188,20 @@ func incIPByOne(ip net.IP) {
 // 全球ip信息
 // http://ipblock.chacuo.net/
 
+// CheckResult
+//
+//	CheckResult
+//	@Description: SNI检查结果
 type CheckResult struct {
 	Ip        string
 	IsProxyIp bool
 	Error     error
 }
 
-func main() {
-	//batchTaskChannel := make(chan []string, 10000)
-
+// IpRangeCheckForProxyCDNIP
+//
+//	@Description: 检查给定的ip范围，并找出反向代理cf的ip
+func IpRangeCheckForProxyCDNIP() {
 	ipRanges, err := ExtractIpRange()
 	if err != nil {
 		fmt.Println("Error extracting: ", err)
@@ -141,9 +219,19 @@ func main() {
 			CheckIfMatchedCf(v)
 		}
 	}
+}
+
+func main() {
+	//IpRangeCheckForProxyCDNIP()
 
 }
 
+// divideIntoBatches
+//
+//	@Description: 将数据切片分批为指定大小的片段
+//	@param data
+//	@param batchSize
+//	@return [][]string
 func divideIntoBatches(data []string, batchSize int) [][]string {
 	// 将数据划分成批次
 	var batches [][]string
@@ -156,6 +244,11 @@ func divideIntoBatches(data []string, batchSize int) [][]string {
 	}
 	return batches
 }
+
+// CheckIfMatchedCf
+//
+//	@Description: 批量检查ip，并判断是否是反向代理cf的ip，最终保存到文本
+//	@param sampleIps
 func CheckIfMatchedCf(sampleIps []string) {
 	resultsChan := make(chan CheckResult, 50)
 	waitGroup := &sync.WaitGroup{}
@@ -206,6 +299,12 @@ func CheckIfMatchedCf(sampleIps []string) {
 
 }
 
+// AppendResultToFile
+//
+//	@Description: 文件追加写入
+//	@param filePath
+//	@param content
+//	@return error
 func AppendResultToFile(filePath, content string) error {
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	defer file.Close()
@@ -221,6 +320,12 @@ func AppendResultToFile(filePath, content string) error {
 	return nil
 }
 
+// SNIChecker
+//
+//	@Description: 使用sni检查代理ip是否反代了指定的sni
+//	@param ipStr
+//	@param serverName
+//	@param resultChan
 func SNIChecker(ipStr string, serverName string, resultChan chan CheckResult) {
 	dialer := &net.Dialer{
 		Timeout: 8 * time.Second,
@@ -277,6 +382,11 @@ func SNIChecker(ipStr string, serverName string, resultChan chan CheckResult) {
 	}
 }
 
+// RemoveDuplicates
+//
+//	@Description: 移除切片中的重复字符串
+//	@param strSlice
+//	@return []string
 func RemoveDuplicates(strSlice []string) []string {
 	keys := make(map[string]bool)
 	list := []string{}
