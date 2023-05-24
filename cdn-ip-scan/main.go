@@ -179,12 +179,25 @@ func CheckIfMatchedCf(sampleIps []string) {
 			proxyedIps = append(proxyedIps, result.Ip)
 		}
 	}
-	fmt.Println("------------------result ip------------------")
-	results := strings.Join(proxyedIps, "\n")
-	fmt.Println(results)
-	err := AppendResultToFile("resultips.txt", results)
-	if err != nil {
-		fmt.Println("write file error:", err)
+	fmt.Println("------------------next batch ips------------------")
+	var trimedResults []string
+	for _, ip := range proxyedIps {
+		trimSpace := strings.TrimSpace(ip)
+		if trimSpace == "" {
+			continue
+		}
+		trimedResults = append(trimedResults, ip)
+
+	}
+	if len(trimedResults) > 0 {
+		fmt.Println("------------------write ips to file------------------")
+
+		results := strings.Join(trimedResults, "\n")
+		fmt.Println(results)
+		err := AppendResultToFile("resultips.txt", results)
+		if err != nil {
+			fmt.Println("write file error:", err)
+		}
 	}
 
 }
@@ -206,7 +219,7 @@ func AppendResultToFile(filePath, content string) error {
 
 func SNIChecker(ipStr string, serverName string, resultChan chan CheckResult) {
 	dialer := &net.Dialer{
-		Timeout: 15 * time.Second,
+		Timeout: 8 * time.Second,
 	}
 	// Replace <IP> with the target IP address.
 	addr := fmt.Sprintf("%s:443", ipStr)
