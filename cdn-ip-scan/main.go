@@ -8,6 +8,7 @@ import (
 	"net"
 	_ "net"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -484,6 +485,17 @@ func SimpleSNIChecker(ipStr string, sni string) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func Zgrab2CheckSNI(ip string, sni string) (string, error) {
+	cmd := exec.Command("zgrab2", "tls", "--sni", sni, "--port", "443", "--timeout", "10", "--tls-version", "TLS", ip)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+
+	return string(output), nil
 }
 
 //IPv4地址空间中有一部分地址是被保留或未分配的，这些地址不能被用于互联网的通信。以下是IPv4地址空间中保留或未分配的地址：
