@@ -185,6 +185,33 @@ func incIPByOne(ip net.IP) {
 	}
 }
 
+// GetIpListFromFile
+//
+//	@Description: 从ip文件中获取ip列表
+//	@param ipsFilePath
+//	@return ipList
+//	@return err
+func GetIpListFromFile(ipsFilePath string) (ipList []string, err error) {
+	file, err := os.Open(ipsFilePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		lines = append(lines, line)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return lines, nil
+}
+
 // 全球ip信息
 // http://ipblock.chacuo.net/
 
@@ -223,6 +250,17 @@ func IpRangeCheckForProxyCDNIP() {
 
 func main() {
 	//IpRangeCheckForProxyCDNIP()
+
+	list, err := GetIpListFromFile("/Users/sunrise/Desktop/results.csv")
+	if err != nil {
+		fmt.Println("get ip list: ", err)
+		return
+	}
+	batches := divideIntoBatches(list, 500)
+	for index, v := range batches {
+		fmt.Println("正在处理第: ", index+1, "批次")
+		CheckIfMatchedCf(v)
+	}
 
 }
 
