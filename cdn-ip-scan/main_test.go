@@ -47,3 +47,12 @@ func TestResult(t *testing.T) {
 	}
 
 }
+
+func TestSimpleSNIChecker(t *testing.T) {
+	var ip string = "220.128.60.167"
+	checker, err := SimpleSNIChecker(ip, "www.cloudflare.com")
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(checker)
+}

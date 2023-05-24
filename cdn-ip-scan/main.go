@@ -17,6 +17,9 @@ import (
 //openssl s_client -connect 220.130.80.179:443 -servername www.cloudflare.com
 
 // echo 220.130.80.179 | zgrab2 tls --server-name www.cloudflare.com | grep "cloudflare" | jq '.ip'
+
+// zmap 快速判断443端口开放
+// sudo zmap -B 100K -p 443 211.72.0.0/16 -o results.csv
 type IpRange struct {
 	IPStart string `json:"IPStart,omitempty"`
 	IPEnd   string `json:"IPEnd,omitempty"`
@@ -24,7 +27,8 @@ type IpRange struct {
 }
 
 func ExtractIpRange() ([]IpRange, error) {
-	filePath := "tw-hinet.txt"
+	//filePath := "tw-hinet.txt"
+	filePath := "jp-oracle.txt"
 
 	// Open the file
 	file, err := os.Open(filePath)
@@ -283,6 +287,55 @@ func RemoveDuplicates(strSlice []string) []string {
 		}
 	}
 	return list
+}
+
+// SimpleSNIChecker
+//
+//	@Description: 检查是否是sni的代理ip
+//	@param ipStr
+//	@param sni
+//	@return bool
+//	@return error
+func SimpleSNIChecker(ipStr string, sni string) (bool, error) {
+	dialer := &net.Dialer{
+		Timeout: 8 * time.Second,
+	}
+	// Replace <IP> with the target IP address.
+	addr := fmt.Sprintf("%s:443", ipStr)
+	conn, err := tls.DialWithDialer(dialer, "tcp", addr, &tls.Config{
+		ServerName: sni,
+	})
+	if err != nil {
+		fmt.Printf("Error connecting to server: %s to %s\n", err, ipStr)
+		return false, err
+		//return false, errors.New("error connecting to server")
+	}
+	defer conn.Close()
+
+	// Print the server certificate details.
+	certs := conn.ConnectionState().PeerCertificates
+	//for i, cert := range certs {
+	//	fmt.Printf("Certificate %d:\n", i+1)
+	//	fmt.Printf("  Subject: %s\n", cert.Subject.CommonName)
+	//	fmt.Printf("  Issuer: %s\n", cert.Issuer.CommonName)
+	//	fmt.Printf("  Valid from: %s\n", cert.NotBefore)
+	//	fmt.Printf("  Valid until: %s\n", cert.NotAfter)
+	//	fmt.Println()
+	//}
+
+	isPassed := false
+	for _, cert := range certs {
+		if strings.Contains(cert.Subject.CommonName, sni) && cert.NotAfter.After(time.Now()) {
+			//return true, nil
+			isPassed = true
+			break
+		}
+
+	}
+	if isPassed {
+		return true, nil
+	}
+	return false, nil
 }
 
 //IPv4地址空间中有一部分地址是被保留或未分配的，这些地址不能被用于互联网的通信。以下是IPv4地址空间中保留或未分配的地址：
