@@ -39,7 +39,7 @@ function scan_ip_port_by_zmap(){
 
     #echo "Zmap scan completed for CIDR: $cidr"
     #zmap -B 100K -p 443 211.72.0.0/16 -G 00:16:3e:3e:c0:80 -o results.csv
-    append_file resultips.txt scanned-results.csv
+    append_file results.csv scanned-results.csv
 }
 
 
