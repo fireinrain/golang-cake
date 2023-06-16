@@ -47,7 +47,7 @@ func main() {
 		accounts = append(accounts, account)
 	}
 
-	fmt.Println("Account size: ", len(accounts))
+	fmt.Println("OpenaiAccount size: ", len(accounts))
 
 	tokens := opaitokens.FakeOpenTokens{}
 	token, err := tokens.FetchPooledToken(accounts)
