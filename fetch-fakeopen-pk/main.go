@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/fireinrain/opaitokens"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -31,15 +32,15 @@ func main() {
 		account := opaitokens.OpenaiAccount{}
 		for index, value := range record {
 			if index == 0 {
-				account.Email = value
+				account.Email = strings.TrimSpace(value)
 				continue
 			}
 			if index == 1 {
-				account.Password = value
+				account.Password = strings.TrimSpace(value)
 				continue
 			}
 			if index == 2 {
-				account.MFA = value
+				account.MFA = strings.TrimSpace(value)
 				continue
 			}
 		}
@@ -50,6 +51,7 @@ func main() {
 
 	tokens := opaitokens.FakeOpenTokens{}
 	token, err := tokens.FetchPooledToken(accounts)
+	fmt.Println("--------------------------------")
 	fmt.Println("Token: ", token)
 
 }
