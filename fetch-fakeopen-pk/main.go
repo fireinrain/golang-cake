@@ -50,8 +50,24 @@ func main() {
 	fmt.Println("OpenaiAccount size: ", len(accounts))
 
 	tokens := opaitokens.FakeOpenTokens{}
-	token, err := tokens.FetchPooledToken(accounts)
-	fmt.Println("--------------------------------")
-	fmt.Println("Token: ", token)
+	//token, err := tokens.FetchPooledToken(accounts)
+	//fmt.Println("--------------------------------")
+	//fmt.Println("Token: ", token)
+	token, err := tokens.RenewSharedToken(accounts)
+	if err != nil {
+		fmt.Println("renewSharedToken error: ", err.Error())
+		// 重新获取pk
+		fmt.Println("--------------------------------")
+		fmt.Println("regain pk token...")
+		pkToken, err2 := tokens.FetchPooledToken(accounts)
+		if err2 != nil {
+			fmt.Println("pk token failed to fetch: ", err2.Error())
+		}
+		fmt.Println("--------------------------------")
+		fmt.Println("pkToken: ", pkToken)
+	} else {
+		fmt.Println("--------------------------------")
+		fmt.Println("Renew Token: ", token)
+	}
 
 }
