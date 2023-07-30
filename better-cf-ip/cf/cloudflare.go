@@ -2,7 +2,11 @@ package cf
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"os"
 	"strings"
 )
@@ -17,7 +21,14 @@ type CloudflareConfig struct {
 	DnsRecordName string
 }
 
+type CloudflareDNS struct{}
+
 var CloudflareConfigValue CloudflareConfig
+
+func init() {
+	config := NewCloudflareConfig()
+	CloudflareConfigValue = *config
+}
 
 func NewCloudflareConfig() *CloudflareConfig {
 	config := &CloudflareConfig{
@@ -50,7 +61,7 @@ func NewCloudflareConfig() *CloudflareConfig {
 		case "ZoneID":
 			config.ZoneID = strings.TrimSpace(keyValue[1])
 		case "DnsRecordType":
-			config.DnsRecordName = strings.TrimSpace(keyValue[1])
+			config.DnsRecordType = strings.TrimSpace(keyValue[1])
 		case "DnsRecordName":
 			config.DnsRecordName = strings.TrimSpace(keyValue[1])
 		default:
@@ -67,7 +78,60 @@ func NewCloudflareConfig() *CloudflareConfig {
 	return config
 }
 
-func init() {
-	config := NewCloudflareConfig()
-	CloudflareConfigValue = *config
+type CloudflareDNSRecord struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Content string `json:"content"`
+}
+
+type CloudflareDNSResponse struct {
+	Result  []CloudflareDNSRecord `json:"result"`
+	Success bool                  `json:"success"`
+}
+
+func (receiver *CloudflareDNS) GetAllDNSRecords() {
+	// Prepare the API URL
+	apiURL := fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/dns_records", CloudflareConfigValue.ZoneID)
+
+	// Create a new HTTP/2 request
+	request, err := http.NewRequest("GET", apiURL, nil)
+	if err != nil {
+		log.Fatal("Error creating API request:", err)
+	}
+
+	// Set the necessary headers for authentication and content type
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", CloudflareConfigValue.ApiKey))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "application/json")
+
+	// Make the HTTP request
+	client := http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		log.Fatal("Error making API request:", err)
+	}
+	defer response.Body.Close()
+
+	// Read the response body
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal("Error reading API response:", err)
+	}
+
+	// Parse the response JSON into a CloudflareDNSResponse struct
+	var cloudflareResponse CloudflareDNSResponse
+	if err := json.Unmarshal(body, &cloudflareResponse); err != nil {
+		log.Fatal("Error parsing API response:", err)
+	}
+
+	// Check if the API request was successful
+	if !cloudflareResponse.Success {
+		log.Fatal("API request was not successful")
+	}
+
+	// Print the DNS records
+	for _, record := range cloudflareResponse.Result {
+		fmt.Printf("ID: %s, Name: %s, Type: %s, Content: %s\n", record.ID, record.Name, record.Type, record.Content)
+	}
 }
