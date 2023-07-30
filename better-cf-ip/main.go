@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"better-cf-ip/cf"
 	"bufio"
 	"context"
 	"errors"
@@ -24,54 +25,51 @@ var speedTestUrl = "https://cloudflarest.gssmc.tk/100mb.zip"
 var ipZipFile = "cf-ip.zip"
 
 func main() {
+	email := cf.CloudflareConfigValue.Email
+	fmt.Println(email)
 	//result.cvs
-	var ipPremium = "result.csv"
-	exists := FileOrDirExists(ipPremium)
-	if exists {
-		currentTime := time.Now()
-		format := currentTime.Format("2006-01-02 15:04:05")
-		fmt.Println("Current date and time:", format)
-		err := os.Rename(ipPremium, format+"-"+ipPremium)
-		if err != nil {
-			fmt.Printf("文件重命名失败: " + err.Error())
-			return
-		}
-	}
-
-	ctx := context.Background()
-	err := requests.
-		URL(gitRepo).
-		ToFile(ipZipFile).
-		Fetch(ctx)
-	fmt.Printf("正在下载文件: %s,请稍后...\n", ipZipFile)
-	if err != nil {
-		fmt.Printf("文件下载失败: %s\n", err.Error())
+	_, failed := DownloadZipFile()
+	if failed {
 		return
 	}
-	fmt.Printf("ip文件下载成功: %s\n", ipZipFile)
 	fmt.Println("--------------------------------------------------------------------------")
-	//解压
-	reader, err := zip.OpenReader(ipZipFile)
-	//自动释放
-	defer reader.Close()
-	if err != nil {
-		fmt.Printf("文件: %s 解压缩失败: %s", ipZipFile, err.Error())
+	failed = UnzipIpFile()
+	if failed {
 		return
 	}
-
-	var dstDir = "ip"
-	if !FileOrDirExists(dstDir) {
-		os.Mkdir(dstDir, os.ModeDir|os.ModePerm)
-	}
-	err2 := Unzip(ipZipFile, "./"+dstDir)
-	if err2 != nil {
-		fmt.Println("Error unzipping:", err2)
-		return
-	}
-	fmt.Println("Unzipped ", ipZipFile, "successfully.")
-
 	fmt.Println("--------------------------------------------------------------------------")
 
+	resultIPText, notSuccess := ExtractAndCombineIp()
+	if notSuccess {
+		return
+	}
+	fmt.Println("--------------------------------------------------------------------------")
+	CloudflareSpeedTest(resultIPText)
+}
+
+func CloudflareSpeedTest(resultIPText string) {
+	fmt.Println("正在运行优选ip程序,请稍后...")
+	//获取ip.txt的绝对路径
+	absPath, err := filepath.Abs(resultIPText)
+	if err != nil {
+		_ = fmt.Errorf(err.Error())
+	}
+	//RunCloudflareST(cftestPath, absPath)
+	cmdParams := []string{
+		cftestPath,
+		"-dn 20",
+		"-p 20",
+		"-url " + speedTestUrl,
+		"-f " + absPath,
+	}
+	cmd := strings.Join(cmdParams, " ")
+	fmt.Println("运行: " + cmd)
+	RunWithCancelCommand(cmd)
+	//cmd2 := "ping baidu.com"
+	//RunWithCancelCommand(cmd2)
+}
+
+func ExtractAndCombineIp() (string, bool) {
 	var resultIPText = "ip.txt"
 	if FileOrDirExists(resultIPText) {
 		_ = os.Remove(resultIPText)
@@ -82,7 +80,7 @@ func main() {
 
 	if err != nil {
 		fmt.Printf("文件创建失败: %s\n", err.Error())
-		return
+		return "", true
 	}
 
 	var ipResults = []string{}
@@ -128,28 +126,59 @@ func main() {
 		resultFile.WriteString(string(ip) + "\n")
 	}
 
-	fmt.Printf("读取解析写入完成: %s,共有: %d个cloudflare ip", resultIPText, lineCounter)
-	fmt.Println("--------------------------------------------------------------------------")
-	fmt.Println("正在运行优选ip程序,请稍后...")
-	//获取ip.txt的绝对路径
-	absPath, err := filepath.Abs(resultIPText)
+	fmt.Printf("读取解析写入完成: %s,共有: %d个cloudflare ip \n", resultIPText, lineCounter)
+	return resultIPText, false
+}
+
+func UnzipIpFile() bool {
+	//解压
+	reader, err := zip.OpenReader(ipZipFile)
+	//自动释放
+	defer reader.Close()
 	if err != nil {
-		_ = fmt.Errorf(err.Error())
-		return
+		fmt.Printf("文件: %s 解压缩失败: %s", ipZipFile, err.Error())
+		return true
 	}
-	//RunCloudflareST(cftestPath, absPath)
-	cmdParams := []string{
-		cftestPath,
-		"-dn 20",
-		"-p 20",
-		"-url " + speedTestUrl,
-		"-f " + absPath,
+
+	var dstDir = "ip"
+	if !FileOrDirExists(dstDir) {
+		os.Mkdir(dstDir, os.ModeDir|os.ModePerm)
 	}
-	cmd := strings.Join(cmdParams, " ")
-	fmt.Println("运行: " + cmd)
-	RunWithCancelCommand(cmd)
-	//cmd2 := "ping baidu.com"
-	//RunWithCancelCommand(cmd2)
+	err2 := Unzip(ipZipFile, "./"+dstDir)
+	if err2 != nil {
+		fmt.Println("Error unzipping:", err2)
+		return true
+	}
+	fmt.Println("Unzipped ", ipZipFile, "successfully.")
+	return false
+}
+
+func DownloadZipFile() (error, bool) {
+	var ipPremium = "result.csv"
+	exists := FileOrDirExists(ipPremium)
+	if exists {
+		currentTime := time.Now()
+		format := currentTime.Format("2006-01-02 15:04:05")
+		fmt.Println("Current date and time:", format)
+		err := os.Rename(ipPremium, format+"-"+ipPremium)
+		if err != nil {
+			fmt.Printf("文件重命名失败: " + err.Error())
+			return nil, true
+		}
+	}
+
+	ctx := context.Background()
+	err := requests.
+		URL(gitRepo).
+		ToFile(ipZipFile).
+		Fetch(ctx)
+	fmt.Printf("正在下载文件: %s,请稍后...\n", ipZipFile)
+	if err != nil {
+		fmt.Printf("文件下载失败: %s\n", err.Error())
+		return nil, true
+	}
+	fmt.Printf("ip文件下载成功: %s\n", ipZipFile)
+	return err, false
 }
 
 func RunWithCancelCommand(cmd string) {
