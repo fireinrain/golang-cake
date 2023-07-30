@@ -287,6 +287,5 @@ func RemoveDuplicates(arr []string) []string {
 			uniqueArr = append(uniqueArr, num)
 		}
 	}
-
 	return uniqueArr
 }
