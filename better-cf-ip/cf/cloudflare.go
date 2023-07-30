@@ -2,13 +2,16 @@ package cf
 
 import (
 	"bufio"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 type CloudflareConfig struct {
@@ -155,7 +158,45 @@ func (receiver *CloudflareDNS) GetAllDNSRecords(DNSType string) []CloudflareDNSR
 //	@receiver receiver
 //	@param ipStr
 //	@return bool
-func (receiver *CloudflareDNS) CheckIfIPAlive(ipStr string) bool {
+func (receiver *CloudflareDNS) CheckIfIPAlive(ipStr string, sni string) (bool, error) {
 
-	return false
+	dialer := &net.Dialer{
+		Timeout: 8 * time.Second,
+	}
+	// Replace <IP> with the target IP address.
+	addr := fmt.Sprintf("%s:443", ipStr)
+	conn, err := tls.DialWithDialer(dialer, "tcp", addr, &tls.Config{
+		ServerName: sni,
+	})
+	if err != nil {
+		fmt.Printf("Error connecting to server: %s to %s\n", err, ipStr)
+		return false, err
+		//return false, errors.New("error connecting to server")
+	}
+	defer conn.Close()
+
+	// Print the server certificate details.
+	certs := conn.ConnectionState().PeerCertificates
+	//for i, cert := range certs {
+	//	fmt.Printf("Certificate %d:\n", i+1)
+	//	fmt.Printf("  Subject: %s\n", cert.Subject.CommonName)
+	//	fmt.Printf("  Issuer: %s\n", cert.Issuer.CommonName)
+	//	fmt.Printf("  Valid from: %s\n", cert.NotBefore)
+	//	fmt.Printf("  Valid until: %s\n", cert.NotAfter)
+	//	fmt.Println()
+	//}
+
+	isPassed := false
+	for _, cert := range certs {
+		if strings.Contains(cert.Subject.CommonName, sni) && cert.NotAfter.After(time.Now()) {
+			//return true, nil
+			isPassed = true
+			break
+		}
+
+	}
+	if isPassed {
+		return true, nil
+	}
+	return false, nil
 }
