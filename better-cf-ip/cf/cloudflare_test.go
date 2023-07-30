@@ -24,9 +24,9 @@ func TestCloudflareDNS_CheckIfIPAlive(t *testing.T) {
 			fmt.Println("当前ip检测出现错误：", err.Error())
 		}
 		if alive {
-			fmt.Println("当前ip可用")
+			fmt.Printf("当前代理ip: %s可用\n", record.Content)
 		} else {
-			fmt.Println("当前ip不可用")
+			fmt.Printf("当前代理ip: %s不可用\n", record.Content)
 		}
 	}
 }
