@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -90,7 +90,13 @@ type CloudflareDNSResponse struct {
 	Success bool                  `json:"success"`
 }
 
-func (receiver *CloudflareDNS) GetAllDNSRecords() {
+// GetAllDNSRecords
+//
+//	@Description: 获取zoneid 所有dns records
+//	@receiver receiver
+//	@param DNSType
+//	@return []CloudflareDNSRecord
+func (receiver *CloudflareDNS) GetAllDNSRecords(DNSType string) []CloudflareDNSRecord {
 	// Prepare the API URL
 	apiURL := fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/dns_records", CloudflareConfigValue.ZoneID)
 
@@ -101,7 +107,9 @@ func (receiver *CloudflareDNS) GetAllDNSRecords() {
 	}
 
 	// Set the necessary headers for authentication and content type
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", CloudflareConfigValue.ApiKey))
+	request.Header.Set("X-Auth-Key", fmt.Sprintf("%s", CloudflareConfigValue.ApiKey))
+	request.Header.Set("X-Auth-Email", fmt.Sprintf("%s", CloudflareConfigValue.Email))
+
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "application/json")
 
@@ -114,7 +122,7 @@ func (receiver *CloudflareDNS) GetAllDNSRecords() {
 	defer response.Body.Close()
 
 	// Read the response body
-	body, err := ioutil.ReadAll(response.Body)
+	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		log.Fatal("Error reading API response:", err)
 	}
@@ -130,8 +138,24 @@ func (receiver *CloudflareDNS) GetAllDNSRecords() {
 		log.Fatal("API request was not successful")
 	}
 
+	var results []CloudflareDNSRecord
 	// Print the DNS records
 	for _, record := range cloudflareResponse.Result {
-		fmt.Printf("ID: %s, Name: %s, Type: %s, Content: %s\n", record.ID, record.Name, record.Type, record.Content)
+		//fmt.Printf("ID: %s, Name: %s, Type: %s, Content: %s\n", record.ID, record.Name, record.Type, record.Content)
+		if record.Type == DNSType {
+			results = append(results, record)
+		}
 	}
+	return results
+}
+
+// CheckIfIPAlive
+//
+//	@Description: 检测cf ip是否可用
+//	@receiver receiver
+//	@param ipStr
+//	@return bool
+func (receiver *CloudflareDNS) CheckIfIPAlive(ipStr string) bool {
+
+	return false
 }
