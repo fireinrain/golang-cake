@@ -2,6 +2,7 @@ package cf
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -199,4 +200,82 @@ func (receiver *CloudflareDNS) CheckIfIPAlive(ipStr string, sni string) (bool, e
 		return true, nil
 	}
 	return false, nil
+}
+
+type PatchedCloudflareDNSResponse struct {
+	Result  CloudflareDNSRecord `json:"result"`
+	Success bool                `json:"success"`
+}
+
+type DNSRecord struct {
+	Content string   `json:"content"`
+	Name    string   `json:"name"`
+	Proxied bool     `json:"proxied"`
+	Type    string   `json:"type"`
+	Comment string   `json:"comment"`
+	Tags    []string `json:"tags"`
+	TTL     int      `json:"ttl"`
+}
+
+// PatchDNSRecord
+//
+//	@Description: 更新dns解析
+//	@receiver receiver
+//	@param domain
+//	@param ipStr 193.123.224.89
+func (receiver *CloudflareDNS) PatchDNSRecord(domainId string, domain string, ipStr string) {
+	// Prepare the API URL
+	apiURL := fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/dns_records/%s", CloudflareConfigValue.ZoneID, domainId)
+
+	//payload
+	newRecord := DNSRecord{
+		Content: ipStr,
+		Name:    domain,
+		Proxied: false,
+		Type:    "A",
+		Comment: "better cloudflare ip",
+		Tags:    nil,
+		TTL:     3600,
+	}
+	payload, _ := json.Marshal(newRecord)
+
+	// Create a new HTTP/2 request
+	request, err := http.NewRequest("PATCH", apiURL, bytes.NewBuffer(payload))
+	if err != nil {
+		log.Fatal("Error creating API request:", err)
+	}
+
+	// Set the necessary headers for authentication and content type
+	request.Header.Set("X-Auth-Key", fmt.Sprintf("%s", CloudflareConfigValue.ApiKey))
+	request.Header.Set("X-Auth-Email", fmt.Sprintf("%s", CloudflareConfigValue.Email))
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "application/json")
+
+	// Make the HTTP request
+	client := http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		log.Fatal("Error making API request:", err)
+	}
+	defer response.Body.Close()
+
+	// Read the response body
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal("Error reading API response:", err)
+	}
+
+	// Parse the response JSON into a CloudflareDNSResponse struct
+	var patchedCloudflareResponse PatchedCloudflareDNSResponse
+	if err := json.Unmarshal(body, &patchedCloudflareResponse); err != nil {
+		log.Fatal("Error parsing API response:", err)
+	}
+
+	// Check if the API request was successful
+	if !patchedCloudflareResponse.Success {
+		log.Fatal("API request was not successful")
+	}
+
+	fmt.Println("Patch DNS record successfully, IP changed to: ", patchedCloudflareResponse.Result.Content)
 }

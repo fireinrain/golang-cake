@@ -30,3 +30,8 @@ func TestCloudflareDNS_CheckIfIPAlive(t *testing.T) {
 		}
 	}
 }
+
+func TestCloudflareDNS_PatchDNSRecord(t *testing.T) {
+	receiver := &CloudflareDNS{}
+	receiver.PatchDNSRecord("e2c253d990cb65c327d03a5c03d1ed65", "tw-hnt.ioerror.eu.org", "8.210.117.18")
+}
