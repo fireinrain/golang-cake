@@ -5,6 +5,7 @@ import (
 	"better-cf-ip/cf"
 	"bufio"
 	"context"
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"github.com/carlmjohnson/requests"
@@ -15,9 +16,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
+
+const sni = "www.cloudflare.com"
 
 var cftestPath = "/Users/sunrise/BackSoftWares/CloudflareST_darwin_amd64/CloudflareST"
 var gitRepo = "https://ghproxy.com/https://github.com/hello-earth/cloudflare-better-ip/archive/refs/heads/main.zip"
@@ -25,26 +29,134 @@ var speedTestUrl = "https://cloudflarest.gssmc.tk/100mb.zip"
 var ipZipFile = "cf-ip.zip"
 
 func main() {
-	email := cf.CloudflareConfigValue.Email
-	fmt.Println(email)
+	receiver := &cf.CloudflareDNS{}
+	records := receiver.GetAllDNSRecords("A")
+	var needPatchedIps []cf.CloudflareDNSRecord
+	for _, record := range records {
+		fmt.Printf("ID: %s, Name: %s, Type: %s, Content: %s\n", record.ID, record.Name, record.Type, record.Content)
+		alive, err := receiver.CheckIfIPAlive(record.Content, sni)
+		if err != nil {
+			fmt.Println("当前ip检测出现错误：", err.Error())
+		}
+		if alive {
+			fmt.Printf("当前代理ip: %s可用 \n", record.Content)
+		} else {
+			fmt.Printf("当前代理ip: %s不可用 \n", record.Content)
+			needPatchedIps = append(needPatchedIps, record)
+		}
+	}
+	//check if need do better ip pick up
+	if len(needPatchedIps) <= 0 {
+		fmt.Println("当前所有代理ip运行良好...")
+		return
+	}
+	//do better ip pick up
+	ipPickUp := DoBetterIpPickUp()
+	fmt.Println(ipPickUp)
+
+}
+
+func DoBetterIpPickUp() []string {
 	//result.cvs
 	_, failed := DownloadZipFile()
 	if failed {
-		return
+		return nil
 	}
 	fmt.Println("--------------------------------------------------------------------------")
 	failed = UnzipIpFile()
 	if failed {
-		return
+		return nil
 	}
 	fmt.Println("--------------------------------------------------------------------------")
 
 	resultIPText, notSuccess := ExtractAndCombineIp()
 	if notSuccess {
-		return
+		return nil
 	}
 	fmt.Println("--------------------------------------------------------------------------")
 	CloudflareSpeedTest(resultIPText)
+	//read result.csv
+	speedTestData := ReadSpeedTestData()
+	fmt.Println(speedTestData)
+	var result []string
+	for _, data := range speedTestData {
+		result = append(result, data.IPAddress)
+	}
+	return result
+}
+
+type SpeedTestData struct {
+	IPAddress      string  `csv:"IP 地址"`
+	Sent           int     `csv:"已发送"`
+	Received       int     `csv:"已接收"`
+	PacketLossRate float64 `csv:"丢包率"`
+	AvgLatency     float64 `csv:"平均延迟"`
+	DownloadSpeed  float64 `csv:"下载速度 (MB/s)"`
+}
+
+func ReadSpeedTestData() []SpeedTestData {
+	// Open the CSV file
+	file, err := os.Open("result.csv")
+	if err != nil {
+		fmt.Println("Error opening CSV file:", err)
+		return nil
+	}
+	defer file.Close()
+
+	// Create a new CSV reader
+	reader := csv.NewReader(file)
+
+	// Read the CSV headers
+	headers, err := reader.Read()
+	if err != nil {
+		fmt.Println("Error reading CSV headers:", err)
+		return nil
+	}
+
+	// Check if the headers match the expected format
+	expectedHeaders := []string{"IP 地址", "已发送", "已接收", "丢包率", "平均延迟", "下载速度 (MB/s)"}
+	if !isEqual(headers, expectedHeaders) {
+		fmt.Println("CSV headers do not match the expected format.")
+		return nil
+	}
+
+	// Read the CSV records and populate the struct
+	var records []SpeedTestData
+	for {
+		record, err := reader.Read()
+		if err != nil {
+			break
+		}
+
+		data := SpeedTestData{}
+		data.IPAddress = record[0]
+		data.Sent, _ = strconv.Atoi(record[1])
+		data.Received, _ = strconv.Atoi(record[2])
+		data.PacketLossRate, _ = strconv.ParseFloat(record[3], 64)
+		data.AvgLatency, _ = strconv.ParseFloat(record[4], 64)
+		data.DownloadSpeed, _ = strconv.ParseFloat(record[5], 64)
+
+		records = append(records, data)
+	}
+
+	// Print the data in the struct
+	//for _, data := range records {
+	//	fmt.Printf("IP Address: %s, Sent: %d, Received: %d, Packet Loss Rate: %.2f, Avg Latency: %.2f, Download Speed: %.2f\n",
+	//		data.IPAddress, data.Sent, data.Received, data.PacketLossRate, data.AvgLatency, data.DownloadSpeed)
+	//}
+	return records
+
+}
+func isEqual(slice1, slice2 []string) bool {
+	if len(slice1) != len(slice2) {
+		return false
+	}
+	for i, v := range slice1 {
+		if v != slice2[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func CloudflareSpeedTest(resultIPText string) {
