@@ -42,7 +42,7 @@ func TestCheckIPAlive(t *testing.T) {
 
 // better ip
 // 1.2.3.4
-// 8.210.117.1
+// 8.210.117.18
 // 193.123.224.89
 func TestCloudflareDNS_PatchDNSRecord(t *testing.T) {
 	receiver := &CloudflareDNS{}
