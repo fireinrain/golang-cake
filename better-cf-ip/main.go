@@ -39,9 +39,9 @@ func main() {
 			fmt.Println("当前ip检测出现错误：", err.Error())
 		}
 		if alive {
-			fmt.Printf("当前代理ip: %s可用 \n", record.Content)
+			fmt.Printf("当前代理ip: %s, 状态: 可用\n", record.Content)
 		} else {
-			fmt.Printf("当前代理ip: %s不可用 \n", record.Content)
+			fmt.Printf("当前代理ip: %s, 状态: 不可用\n", record.Content)
 			needPatchedIps = append(needPatchedIps, record)
 		}
 	}
@@ -50,9 +50,16 @@ func main() {
 		fmt.Println("当前所有代理ip运行良好...")
 		return
 	}
+	fmt.Println("--------------------------------------------------------------------------")
+	fmt.Println("当前出现无法使用的代理ip，正在执行优选，并替换DNS解析...")
 	//do better ip pick up
 	ipPickUp := DoBetterIpPickUp()
-	fmt.Println(ipPickUp)
+	//fmt.Println(ipPickUp)
+	for index, ip := range needPatchedIps {
+		betterIp := ipPickUp[index]
+		receiver.PatchDNSRecord(ip.ID, ip.Name, betterIp)
+	}
+	fmt.Println("DNS记录更新完成...")
 
 }
 
@@ -173,6 +180,7 @@ func CloudflareSpeedTest(resultIPText string) {
 		"-p 20",
 		"-url " + speedTestUrl,
 		"-f " + absPath,
+		"-o " + "result.csv",
 	}
 	cmd := strings.Join(cmdParams, " ")
 	fmt.Println("运行: " + cmd)

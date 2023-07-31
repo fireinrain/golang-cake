@@ -31,6 +31,19 @@ func TestCloudflareDNS_CheckIfIPAlive(t *testing.T) {
 	}
 }
 
+func TestCheckIPAlive(t *testing.T) {
+	receiver := &CloudflareDNS{}
+	alive, err := receiver.CheckIfIPAlive("1.2.3.4", "www.cloudflare.com")
+	if err != nil {
+		fmt.Println("errors:", err.Error())
+	}
+	fmt.Println(alive)
+}
+
+// better ip
+// 1.2.3.4
+// 8.210.117.1
+// 193.123.224.89
 func TestCloudflareDNS_PatchDNSRecord(t *testing.T) {
 	receiver := &CloudflareDNS{}
 	receiver.PatchDNSRecord("e2c253d990cb65c327d03a5c03d1ed65", "tw-hnt.ioerror.eu.org", "8.210.117.18")
