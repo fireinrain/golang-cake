@@ -176,8 +176,10 @@ func CloudflareSpeedTest(resultIPText string) {
 	//RunCloudflareST(cftestPath, absPath)
 	cmdParams := []string{
 		cftestPath,
-		"-dn 20",
-		"-p 20",
+		"-dn 5",
+		"-p 5",
+		"-sl 2",
+		"-tl 300",
 		"-url " + speedTestUrl,
 		"-f " + absPath,
 		"-o " + "result.csv",
