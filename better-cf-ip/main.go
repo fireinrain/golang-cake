@@ -34,7 +34,14 @@ func main() {
 	var needPatchedIps []cf.CloudflareDNSRecord
 	for _, record := range records {
 		fmt.Printf("ID: %s, Name: %s, Type: %s, Content: %s\n", record.ID, record.Name, record.Type, record.Content)
-		alive, err := receiver.CheckIfIPAlive(record.Content, sni)
+		var alive bool
+		var err error
+		for i := 0; i < 3; i++ {
+			alive, err = receiver.CheckIfIPAlive(record.Content, sni)
+			if alive {
+				break
+			}
+		}
 		if err != nil {
 			fmt.Println("当前ip检测出现错误：", err.Error())
 		}
