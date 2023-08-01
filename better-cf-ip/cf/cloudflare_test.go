@@ -42,8 +42,8 @@ func TestCheckIPAlive(t *testing.T) {
 
 // better ip
 // 1.2.3.4
-// 8.210.117.18
-// 193.123.224.89
+// 8.210.117.18 hk alibaba
+// 193.123.224.89 korean oracle
 func TestCloudflareDNS_PatchDNSRecord(t *testing.T) {
 	receiver := &CloudflareDNS{}
 	receiver.PatchDNSRecord("e2c253d990cb65c327d03a5c03d1ed65", "tw-hnt.ioerror.eu.org", "8.210.117.18")
