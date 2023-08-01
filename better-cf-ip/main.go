@@ -84,7 +84,7 @@ func DoBetterIpPickUp() []string {
 	CloudflareSpeedTest(resultIPText)
 	//read result.csv
 	speedTestData := ReadSpeedTestData()
-	fmt.Println(speedTestData)
+	//fmt.Println(speedTestData)
 	var result []string
 	for _, data := range speedTestData {
 		result = append(result, data.IPAddress)
