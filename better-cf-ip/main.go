@@ -31,9 +31,10 @@ var ipZipFile = "cf-ip.zip"
 func main() {
 	receiver := &cf.CloudflareDNS{}
 	records := receiver.GetAllDNSRecords("A")
+	fmt.Println("共找到反代DNS解析记录: ", len(records), "条")
 	var needPatchedIps []cf.CloudflareDNSRecord
-	for _, record := range records {
-		fmt.Printf("ID: %s, Name: %s, Type: %s, Content: %s\n", record.ID, record.Name, record.Type, record.Content)
+	for index, record := range records {
+		fmt.Printf("DNS记录 ID: %s, Name: %s, Type: %s, Content: %s\n", record.ID, record.Name, record.Type, record.Content)
 		var alive bool
 		var err error
 		for i := 0; i < 3; i++ {
@@ -46,11 +47,12 @@ func main() {
 			fmt.Println("当前ip检测出现错误：", err.Error())
 		}
 		if alive {
-			fmt.Printf("当前代理ip: %s, 状态: 可用\n", record.Content)
+			fmt.Printf("检测进度: %d/%d,当前代理ip: %s, 状态: 可用\n", index+1, len(records), record.Content)
 		} else {
-			fmt.Printf("当前代理ip: %s, 状态: 不可用\n", record.Content)
+			fmt.Printf("检测进度: %d/%d,当前代理ip: %s, 状态: 不可用\n", index+1, len(records), record.Content)
 			needPatchedIps = append(needPatchedIps, record)
 		}
+		fmt.Println("................................................................")
 	}
 	//check if need do better ip pick up
 	if len(needPatchedIps) <= 0 {
