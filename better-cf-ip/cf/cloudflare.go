@@ -87,6 +87,7 @@ type CloudflareDNSRecord struct {
 	Name    string `json:"name"`
 	Type    string `json:"type"`
 	Content string `json:"content"`
+	Proxied bool   `json:"proxied"`
 }
 
 type CloudflareDNSResponse struct {
@@ -146,7 +147,8 @@ func (receiver *CloudflareDNS) GetAllDNSRecords(DNSType string) []CloudflareDNSR
 	// Print the DNS records
 	for _, record := range cloudflareResponse.Result {
 		//fmt.Printf("ID: %s, Name: %s, Type: %s, Content: %s\n", record.ID, record.Name, record.Type, record.Content)
-		if record.Type == DNSType {
+		//不是开启了cdn小云朵的dns 记录
+		if record.Type == DNSType && record.Proxied == false {
 			results = append(results, record)
 		}
 	}
