@@ -21,6 +21,8 @@ import (
 	"time"
 )
 
+//https://sg-ali.ioerror.eu.org/cdn-cgi/trace
+
 const sni = "www.cloudflare.com"
 
 var cftestPath = "/Users/sunrise/BackSoftWares/CloudflareST_darwin_amd64/CloudflareST"
