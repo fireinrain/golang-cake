@@ -169,7 +169,8 @@ func (receiver *CloudflareDNS) CheckIfIPAlive(ipStr string, sni string) (bool, e
 	// Replace <IP> with the target IP address.
 	addr := fmt.Sprintf("%s:443", ipStr)
 	conn, err := tls.DialWithDialer(dialer, "tcp", addr, &tls.Config{
-		ServerName: sni,
+		ServerName:         sni,
+		InsecureSkipVerify: true,
 	})
 	if err != nil {
 		fmt.Printf("Error connecting to server: %s to %s\n", err, ipStr)

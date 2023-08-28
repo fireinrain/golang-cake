@@ -372,7 +372,8 @@ func SNIChecker(ipStr string, serverName string, resultChan chan CheckResult) {
 	// Replace <IP> with the target IP address.
 	addr := fmt.Sprintf("%s:443", ipStr)
 	conn, err := tls.DialWithDialer(dialer, "tcp", addr, &tls.Config{
-		ServerName: serverName,
+		ServerName:         serverName,
+		InsecureSkipVerify: true,
 	})
 	if err != nil {
 		//fmt.Printf("Error connecting to server: %s to %s\n", err, ipStr)
@@ -452,7 +453,8 @@ func SimpleSNIChecker(ipStr string, sni string) (bool, error) {
 	// Replace <IP> with the target IP address.
 	addr := fmt.Sprintf("%s:443", ipStr)
 	conn, err := tls.DialWithDialer(dialer, "tcp", addr, &tls.Config{
-		ServerName: sni,
+		ServerName:         sni,
+		InsecureSkipVerify: true,
 	})
 	if err != nil {
 		fmt.Printf("Error connecting to server: %s to %s\n", err, ipStr)
