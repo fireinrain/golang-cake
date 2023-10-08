@@ -111,25 +111,25 @@ func UseOfficialRefreshTokens() {
 	fmt.Println("OpenaiAccount size: ", len(accounts))
 
 	tokens := opaitokens.FakeOpenTokens{}
-	token, err := tokens.FetchPooledTokenWithRefreshToken(accounts, SharedTokenUniqueName)
-	fmt.Println("--------------------------------")
-	fmt.Println("Token: ", token)
-	//token, err := tokens.RenewSharedTokenWithRefreshToken(accounts, SharedTokenUniqueName)
-	//if err != nil {
-	//	fmt.Println("renewSharedToken error: ", err.Error())
-	//	// 重新获取pk
-	//	fmt.Println("--------------------------------")
-	//	fmt.Println("regain pk token...")
-	//	pkToken, err2 := tokens.FetchPooledTokenWithRefreshToken(accounts, SharedTokenUniqueName)
-	//	if err2 != nil {
-	//		fmt.Println("pk token failed to fetch: ", err2.Error())
-	//	}
-	//	fmt.Println("--------------------------------")
-	//	fmt.Println("pkToken: ", pkToken)
-	//} else {
-	//	fmt.Println("--------------------------------")
-	//	fmt.Println("Renew Token: ", token)
-	//}
+	//token, err := tokens.FetchPooledTokenWithRefreshToken(accounts, SharedTokenUniqueName)
+	//fmt.Println("--------------------------------")
+	//fmt.Println("Token: ", token)
+	token, err := tokens.RenewSharedTokenWithRefreshToken(accounts, SharedTokenUniqueName)
+	if err != nil {
+		fmt.Println("renewSharedToken error: ", err.Error())
+		// 重新获取pk
+		fmt.Println("--------------------------------")
+		fmt.Println("regain pk token...")
+		pkToken, err2 := tokens.FetchPooledTokenWithRefreshToken(accounts, SharedTokenUniqueName)
+		if err2 != nil {
+			fmt.Println("pk token failed to fetch: ", err2.Error())
+		}
+		fmt.Println("--------------------------------")
+		fmt.Println("pkToken: ", pkToken)
+	} else {
+		fmt.Println("--------------------------------")
+		fmt.Println("Renew Token: ", token)
+	}
 }
 
 func main() {
