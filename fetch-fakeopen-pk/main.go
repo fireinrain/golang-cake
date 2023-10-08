@@ -8,7 +8,9 @@ import (
 	"strings"
 )
 
-func main() {
+const SharedTokenUniqueName = "fireinrain"
+
+func UseOfficialAccounts() {
 	//read openai accounts from csv
 	file, err := os.Open("accounts.secret")
 	if err != nil {
@@ -53,13 +55,13 @@ func main() {
 	//token, err := tokens.FetchPooledToken(accounts)
 	//fmt.Println("--------------------------------")
 	//fmt.Println("Token: ", token)
-	token, err := tokens.RenewSharedToken(accounts)
+	token, err := tokens.RenewSharedToken(accounts, SharedTokenUniqueName)
 	if err != nil {
 		fmt.Println("renewSharedToken error: ", err.Error())
 		// 重新获取pk
 		fmt.Println("--------------------------------")
 		fmt.Println("regain pk token...")
-		pkToken, err2 := tokens.FetchPooledToken(accounts)
+		pkToken, err2 := tokens.FetchPooledToken(accounts, SharedTokenUniqueName)
 		if err2 != nil {
 			fmt.Println("pk token failed to fetch: ", err2.Error())
 		}
@@ -69,5 +71,67 @@ func main() {
 		fmt.Println("--------------------------------")
 		fmt.Println("Renew Token: ", token)
 	}
+}
 
+func UseOfficialRefreshTokens() {
+	//read openai accounts from csv
+	file, err := os.Open("accounts-refresh.secret")
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return
+	}
+	defer file.Close()
+
+	// Create a new CSV reader
+	reader := csv.NewReader(file)
+
+	// Read all the records
+	records, err := reader.ReadAll()
+	if err != nil {
+		fmt.Println("Error reading CSV:", err)
+		return
+	}
+	var accounts []opaitokens.RenewSharedTokenRFT
+	// Iterate over the records and print each one
+	for _, record := range records {
+		account := opaitokens.RenewSharedTokenRFT{}
+		for index, value := range record {
+			if index == 0 {
+				account.OpenaiAccountEmail = strings.TrimSpace(value)
+				continue
+			}
+			if index == 1 {
+				account.OpenaiRefreshToken = strings.TrimSpace(value)
+				continue
+			}
+		}
+		accounts = append(accounts, account)
+	}
+
+	fmt.Println("OpenaiAccount size: ", len(accounts))
+
+	tokens := opaitokens.FakeOpenTokens{}
+	token, err := tokens.FetchPooledTokenWithRefreshToken(accounts, SharedTokenUniqueName)
+	fmt.Println("--------------------------------")
+	fmt.Println("Token: ", token)
+	//token, err := tokens.RenewSharedTokenWithRefreshToken(accounts, SharedTokenUniqueName)
+	//if err != nil {
+	//	fmt.Println("renewSharedToken error: ", err.Error())
+	//	// 重新获取pk
+	//	fmt.Println("--------------------------------")
+	//	fmt.Println("regain pk token...")
+	//	pkToken, err2 := tokens.FetchPooledTokenWithRefreshToken(accounts, SharedTokenUniqueName)
+	//	if err2 != nil {
+	//		fmt.Println("pk token failed to fetch: ", err2.Error())
+	//	}
+	//	fmt.Println("--------------------------------")
+	//	fmt.Println("pkToken: ", pkToken)
+	//} else {
+	//	fmt.Println("--------------------------------")
+	//	fmt.Println("Renew Token: ", token)
+	//}
+}
+
+func main() {
+	UseOfficialRefreshTokens()
 }
