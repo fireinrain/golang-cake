@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const SharedTokenUniqueName = "fireinrain"
+const SharedTokenUniqueName = "fireinrain2"
 
 func UseOfficialAccounts() {
 	//read openai accounts from csv
@@ -133,5 +133,6 @@ func UseOfficialRefreshTokens() {
 }
 
 func main() {
-	UseOfficialRefreshTokens()
+	//UseOfficialRefreshTokens()
+	UseOfficialAccounts()
 }
