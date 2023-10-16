@@ -50,11 +50,13 @@ func UseOfficialAccounts() {
 	}
 
 	fmt.Println("OpenaiAccount size: ", len(accounts))
-
+	//以下代码 第一次运行 后面可以注释掉 这里第一次获取pk，之后可以注释掉 然后直接只使用下面的刷新pk就可以
 	tokens := opaitokens.FakeOpenTokens{}
-	//token, err := tokens.FetchPooledToken(accounts)
-	//fmt.Println("--------------------------------")
-	//fmt.Println("Token: ", token)
+	token2, err := tokens.FetchPooledToken(accounts, SharedTokenUniqueName)
+	fmt.Println("--------------------------------")
+	fmt.Println("Token: ", token2)
+	//这里第一次获取pk，之后可以注释掉 然后直接只使用下面的刷新pk就可以
+
 	token, err := tokens.RenewSharedToken(accounts, SharedTokenUniqueName)
 	if err != nil {
 		fmt.Println("renewSharedToken error: ", err.Error())
